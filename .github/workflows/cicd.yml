@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+permissions:
+    contents: write
+    id-token: write
   # pull_request
   #   branches:
   #     - cicd
@@ -13,7 +16,6 @@ jobs:
   Continuos-Integration_build_and_push:
     runs-on: terraform
     env:
-      REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: us-east-1
@@ -24,6 +26,12 @@ jobs:
       with:
         repository: joyuc/main_bank_app_backend
         ref: main
+
+    - name: Setup GitHub OIDC
+      run: | 
+           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+           unzip awscliv2.zip
+           sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
 
 
     - name: Log in to awscli
