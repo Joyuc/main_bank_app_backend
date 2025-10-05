@@ -5,9 +5,6 @@ on:
   push:
     branches:
       - main
-# permissions:
-#     contents: write
-#     id-token: write
   # pull_request
   #   branches:
   #     - cicd
@@ -27,12 +24,6 @@ jobs:
         repository: joyuc/main_bank_app_backend
         ref: main
 
-    # - name: Setup GitHub OIDC
-    #   run: | 
-    #        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    #        unzip awscliv2.zip
-    #        sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
-
 
     - name: Log in to awscli
       uses: aws-actions/configure-aws-credentials@v3
@@ -40,10 +31,6 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
-
-
-    # - name: Set up Docker Buildx
-    #   uses: docker/setup-buildx-action@v3
 
 
     - name: Build container image
