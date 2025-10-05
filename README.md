@@ -1,10 +1,10 @@
 
 # Digital Witch Cloud Security / DevOps Project On Bank Managmenet App
-## This is the backend app which is coded and  Create Java.
+## This is the backend app which is coded and created in Java.
 ## And the database is mysql database 
 -----------------------------------------------------------------------
 
-Befor starting the project set up, make sure you have properly installed the below softwares:
+Before starting the project set up, I properly installed the below softwares:
 1) Java JDK 17 or above version
 2) STS (STS 4 recommended)
 3) Node JS

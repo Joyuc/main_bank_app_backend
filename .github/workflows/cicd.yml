@@ -10,8 +10,8 @@ on:
   #     - cicd
 
 jobs:
-  Continues-Integration_build_and_push:
-    runs-on: ubuntu-latest
+  Continuos-Integration_build_and_push:
+    runs-on: terraform
     env:
       REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -22,7 +22,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-        repository: digitalwitchdemo/main_bank_app_backend
+        repository: joyuc/main_bank_app_backend
         ref: main
 
 
@@ -58,26 +58,26 @@ jobs:
 
 
   
-  Continues-Update_k8s_manifest:
-    runs-on: ubuntu-latest
-    needs: Continues-Integration_build_and_push
+  Continuos-Update_k8s_manifest:
+    runs-on: terraform
+    needs: Continuos-Integration_build_and_push
     steps:
     - name: Checkout repository
       env:
           GIT_USERNAME: ${{ secrets.GIT_USERNAME }}
           GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
       run: |
-         git clone https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/digitalwitchdemo/kubernetes-manifest.git
+         git clone https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/joyuc/kubernetes-manifest.git
          
          cd kubernetes-manifest
-         git config --global user.email "chukwunonsosmartagbawo@gmail.com"
-         git config --global user.name "smartcloud2023"
+         git config --global user.email "cynthia4ukibe@gmail.com"
+         git config --global user.name "joyuc"
 
          sed -i "s+${{ vars.ECR_REPO }}/bank-backendapi:.*+${{ vars.ECR_REPO }}/bank-backendapi:${{ github.run_number }}+g" ./bank-project/backendapi.yaml
 
          cat ./bank-project/backendapi.yaml | grep -q "${{ vars.ECR_REPO }}/bank-backendapi:${{ github.run_number }}"
 
          git add bank-project/backendapi.yaml
-         git commit -m "Update. backendapi image to version ${{ github.run_number }}"
+         git commit -m "Updated backendapi image to version ${{ github.run_number }}"
          git push origin main
         
