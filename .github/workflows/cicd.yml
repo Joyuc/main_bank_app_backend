@@ -34,6 +34,10 @@ jobs:
         aws-region: us-east-1
 
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+
     - name: Build container image
       run: docker build -t bank-app-backend:latest .
 
