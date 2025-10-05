@@ -27,11 +27,11 @@ jobs:
         repository: joyuc/main_bank_app_backend
         ref: main
 
-    # - name: Setup GitHub OIDC
-    #   run: | 
-    #        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    #        unzip awscliv2.zip
-    #        sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+    - name: Setup GitHub OIDC
+      run: | 
+           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+           unzip awscliv2.zip
+           sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
 
 
     - name: Log in to awscli
@@ -42,12 +42,12 @@ jobs:
         aws-region: us-east-1
 
 
-    # - name: Set up Docker Buildx
-    #   uses: docker/setup-buildx-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
 
     - name: Build container image
-      run: docker build -t bank-app-backend:latest .
+      run: docker buildx build -t bank-app-backend:latest .
 
     - name: Log in to ECR with short-lived credentials
       run: |
