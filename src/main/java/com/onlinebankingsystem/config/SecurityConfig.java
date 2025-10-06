@@ -34,7 +34,6 @@ public class SecurityConfig {
     private JwtAuthFilter authFilter;
 
     @Bean
-    // authentication
     public UserDetailsService userDetailsService() {
         return new CustomUserDetailsService();
     }
@@ -43,64 +42,81 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http.csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // enable CORS
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .authorizeHttpRequests(auth -> auth
+                // Public endpoints
+                .requestMatchers(
+                    "/api/user/login",
+                    "/api/user/admin/register",
+                    "/api/ping"       // <-- Added ping endpoint
+                ).permitAll()
 
-            .authorizeHttpRequests(
-                auth -> auth.requestMatchers("/api/user/login", "/api/user/admin/register").permitAll()
+                // ADMIN-only endpoints
+                .requestMatchers(
+                    "/api/bank/register",
+                    "/api/bank/fetch/all",
+                    "/api/bank/fetch/user",
+                    "/api/bank/account/fetch/all",
+                    "/api/bank/transaction/all"
+                ).hasAuthority(UserRole.ROLE_ADMIN.value())
 
-                    // ADMIN-only APIs
-                    .requestMatchers("/api/bank/register","/api/bank/fetch/all", "/api/bank/fetch/user",
-                            "/api/bank/account/fetch/all", "/api/bank/transaction/all")
-                    .hasAuthority(UserRole.ROLE_ADMIN.value())
+                // BANK-only endpoints
+                .requestMatchers(
+                    "/api/bank/account/add",
+                    "/api/bank/account/fetch/bankwise",
+                    "/api/bank/account/fetch/id",
+                    "/api/bank/account/search",
+                    "/api/bank/transaction/deposit",
+                    "/api/bank/transaction/withdraw",
+                    "/api/bank/transaction/customer/fetch",
+                    "/api/bank/transaction/customer/fetch/timerange",
+                    "/api/bank/transaction/all/customer/fetch/timerange",
+                    "/api/bank/transaction/all/customer/fetch",
+                    "/api/user/bank/customer/search"
+                ).hasAuthority(UserRole.ROLE_BANK.value())
 
-                    // BANK-only APIs
-                    .requestMatchers("/api/bank/account/add","/api/bank/account/fetch/bankwise","/api/bank/account/fetch/id",
-                            "/api/bank/account/search","/api/bank/transaction/deposit","/api/bank/transaction/withdraw",
-                            "/api/bank/transaction/customer/fetch", "/api/bank/transaction/customer/fetch/timerange",
-                            "/api/bank/transaction/all/customer/fetch/timerange", "/api/bank/transaction/all/customer/fetch",
-                            "/api/user/bank/customer/search")
-                    .hasAuthority(UserRole.ROLE_BANK.value())
+                // CUSTOMER-only endpoints
+                .requestMatchers(
+                    "/api/bank/transaction/account/transfer",
+                    "/api/bank/transaction/history/timerange"
+                ).hasAuthority(UserRole.ROLE_CUSTOMER.value())
 
-                    // CUSTOMER-only APIs
-                    .requestMatchers("/api/bank/transaction/account/transfer",
-                            "/api/bank/transaction/history/timerange")
-                    .hasAuthority(UserRole.ROLE_CUSTOMER.value())
+                // BANK & CUSTOMER endpoints
+                .requestMatchers(
+                    "/api/bank/account/fetch/user",
+                    "/api/bank/transaction/history"
+                ).hasAnyAuthority(
+                    UserRole.ROLE_BANK.value(),
+                    UserRole.ROLE_CUSTOMER.value(),
+                    UserRole.ROLE_ADMIN.value()
+                )
 
-                    // BANK & CUSTOMER APIs
-                    .requestMatchers("/api/bank/account/fetch/user", "/api/bank/transaction/history")
-                    .hasAnyAuthority(UserRole.ROLE_BANK.value(), UserRole.ROLE_CUSTOMER.value(), UserRole.ROLE_ADMIN.value())
+                // BANK & ADMIN endpoints
+                .requestMatchers(
+                    "/api/user/register",
+                    "/api/bank/account/search/all"
+                ).hasAnyAuthority(
+                    UserRole.ROLE_BANK.value(),
+                    UserRole.ROLE_ADMIN.value()
+                )
 
-                    // BANK & ADMIN APIs
-                    .requestMatchers("/api/user/register", "/api/bank/account/search/all")
-                    .hasAnyAuthority(UserRole.ROLE_BANK.value(), UserRole.ROLE_ADMIN.value())
+                // BANK, ADMIN & CUSTOMER endpoints
+                .requestMatchers(
+                    "/api/bank/fetch/id",
+                    "/api/bank/transaction/statement/download"
+                ).hasAnyAuthority(
+                    UserRole.ROLE_BANK.value(),
+                    UserRole.ROLE_ADMIN.value(),
+                    UserRole.ROLE_CUSTOMER.value()
+                )
 
-                    // BANK, ADMIN & CUSTOMER APIs
-                    .requestMatchers("/api/bank/fetch/id", "/api/bank/transaction/statement/download")
-                    .hasAnyAuthority(UserRole.ROLE_BANK.value(), UserRole.ROLE_ADMIN.value(), UserRole.ROLE_CUSTOMER.value())
-
-                    .anyRequest()
-                    .authenticated()
+                .anyRequest().authenticated()
             )
-
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    // CORS configuration for frontend access
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("https://bank.jay4tech.online")); // your frontend URL
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 
     @Bean
@@ -121,4 +137,16 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("https://bank.jay4tech.online"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 }
