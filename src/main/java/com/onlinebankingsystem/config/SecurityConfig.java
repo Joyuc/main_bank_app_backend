@@ -1,5 +1,6 @@
 package com.onlinebankingsystem.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,86 +16,90 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.onlinebankingsystem.filter.JwtAuthFilter;
 import com.onlinebankingsystem.utility.Constants.UserRole;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+	
+	@Autowired
+	private JwtAuthFilter authFilter;
 
-    private final JwtAuthFilter jwtAuthFilter;
+	@Bean
+	// authentication
+	public UserDetailsService userDetailsService() {
+		return new CustomUserDetailsService();
+	}
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
-        this.jwtAuthFilter = jwtAuthFilter;
-    }
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-    @Bean
-    public UserDetailsService userDetailsService() {
-        return new CustomUserDetailsService();
-    }
+		http.csrf(csrf -> csrf.disable())
+		        .cors(cors -> cors.disable())
+		    
+				.authorizeHttpRequests(
+						auth -> auth.requestMatchers("/api/user/login", "/api/user/admin/register").permitAll()
+						
+						// this APIs are only accessible by ADMIN
+						.requestMatchers("/api/bank/register","/api/bank/fetch/all", "/api/bank/fetch/user",
+								"/api/bank/account/fetch/all", "/api/bank/transaction/all")
+						.hasAuthority(UserRole.ROLE_ADMIN.value())
+						
+						// this APIs are only accessible by BANK
+						.requestMatchers("/api/bank/account/add","/api/bank/account/fetch/bankwise","/api/bank/account/fetch/id"
+								,"/api/bank/account/search","/api/bank/transaction/deposit","/api/bank/transaction/withdraw",
+								"/api/bank/transaction/customer/fetch", "/api/bank/transaction/customer/fetch/timerange",
+								"/api/bank/transaction/all/customer/fetch/timerange", "/api/bank/transaction/all/customer/fetch",
+								"/api/user/bank/customer/search")
+						.hasAuthority(UserRole.ROLE_BANK.value())
+						
+						// this APIs are only accessible by CUSTOMER
+						.requestMatchers("/api/bank/transaction/account/transfer",
+								"/api/bank/transaction/history/timerange")
+						.hasAuthority(UserRole.ROLE_CUSTOMER.value())
+						
+						// this APIs are only accessible by BANK & CUSTOMER
+						.requestMatchers("/api/bank/account/fetch/user", "/api/bank/transaction/history")
+						.hasAnyAuthority(UserRole.ROLE_BANK.value(), UserRole.ROLE_CUSTOMER.value(), UserRole.ROLE_ADMIN.value())
+						
+						// this APIs are only accessible by BANK & ADMIN
+						.requestMatchers("/api/user/register", "/api/bank/account/search/all")
+						.hasAnyAuthority(UserRole.ROLE_BANK.value(), UserRole.ROLE_ADMIN.value())
+						
+						// this APIs are only accessible by BANK, ADMIN & CUSTOMER
+						.requestMatchers("/api/bank/fetch/id", "/api/bank/transaction/statement/download")
+						.hasAnyAuthority(UserRole.ROLE_BANK.value(), UserRole.ROLE_ADMIN.value(), UserRole.ROLE_CUSTOMER.value())
+						
+						.anyRequest()
+						.authenticated())
+		        
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/user/login", "/api/user/admin/register", "/api/ping").permitAll()
-                .requestMatchers("/api/bank/register", "/api/bank/fetch/all",
-                                 "/api/bank/fetch/user", "/api/bank/account/fetch/all",
-                                 "/api/bank/transaction/all").hasAuthority(UserRole.ROLE_ADMIN.value())
-                .requestMatchers("/api/bank/account/add", "/api/bank/account/fetch/bankwise",
-                                 "/api/bank/account/fetch/id", "/api/bank/account/search",
-                                 "/api/bank/transaction/deposit", "/api/bank/transaction/withdraw",
-                                 "/api/bank/transaction/customer/fetch",
-                                 "/api/bank/transaction/customer/fetch/timerange",
-                                 "/api/bank/transaction/all/customer/fetch/timerange",
-                                 "/api/bank/transaction/all/customer/fetch",
-                                 "/api/user/bank/customer/search").hasAuthority(UserRole.ROLE_BANK.value())
-                .requestMatchers("/api/bank/transaction/account/transfer",
-                                 "/api/bank/transaction/history/timerange")
-                .hasAuthority(UserRole.ROLE_CUSTOMER.value())
-                .anyRequest().authenticated())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+		http.addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class);
 
-        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+		return http.build();
 
-        return http.build();
-    }
+	}
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
 
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService());
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
-    }
+	@Bean
+	public AuthenticationProvider authenticationProvider() {
+		DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+		authenticationProvider.setUserDetailsService(userDetailsService());
+		authenticationProvider.setPasswordEncoder(passwordEncoder());
+		return authenticationProvider;
+	}
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+	@Bean
+	public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+		return config.getAuthenticationManager();
+	}
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("https://bank.jay4tech.online"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
-    }
 }
