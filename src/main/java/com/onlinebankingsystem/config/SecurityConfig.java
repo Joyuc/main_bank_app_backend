@@ -48,7 +48,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/user/login",
                     "/api/user/admin/register",
-                    "/api/ping"       // <-- Added ping endpoint
+                    "/api/ping"
                 ).permitAll()
 
                 // ADMIN-only endpoints
